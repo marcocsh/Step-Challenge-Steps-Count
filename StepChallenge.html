@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>步數挑戰活動</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <style>
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+    }
+    .flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange, .flatpickr-day.today {
+      background: #6b7280 !important;
+      color: #fff !important;
+      border-color: #6b7280 !important;
+    }
+    .flatpickr-day:hover {
+      background: #9ca3af !important;
+      color: #fff;
+    }
+    .flatpickr-current-month {
+      color: #374151 !important;
+    }
+    .flatpickr-weekday {
+      color: #4b5563 !important;
+    }
+    .image-preview {
+      max-width: 200px;
+      max-height: 200px;
+      margin-top: 1rem;
+      display: none;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.5rem;
+    }
+  </style>
+</head>
+<body class="bg-gray-100">
+  <div class="container mx-auto p-6 sm:p-10 md:p-12 lg:p-16">
+    <!-- 登入區塊 -->
+    <div id="loginSection" class="bg-white rounded-lg shadow-md p-6 mb-8">
+      <h2 class="text-xl font-semibold text-gray-700 mb-4">歡迎參加！</h2>
+      <p class="text-gray-600 mb-4">請使用您的員工編號登入，並開始記錄您的每日步數。</p>
+      <div class="mb-4">
+        <label for="employeeId" class="block text-gray-700 text-sm font-bold mb-2">員工編號：</label>
+        <input type="text" id="employeeId" placeholder="請輸入您的員工編號" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+      </div>
+      <button id="loginButton" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">登入</button>
+      <div id="loginError" class="text-red-500 text-xs italic mt-2" style="display: none;">請輸入正確的員工編號。</div>
+      <div id="welcomeMessage" class="text-green-600 text-md font-semibold mt-4" style="display: none;">歡迎！</div>
+      <!-- 新增登出按鈕（初始隱藏） -->
+      <button id="logoutButton" style="display: none;" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">登出</button>
+    </div>
+
+    <!-- 步數輸入區塊 -->
+    <div id="dataEntrySection" class="bg-white rounded-lg shadow-md p-6 mb-8" style="display: none;">
+      <h2 class="text-xl font-semibold text-gray-700 mb-4">記錄您的步數</h2>
+      <div class="mb-4">
+        <label for="datePicker" class="block text-gray-700 text-sm font-bold mb-2">選擇日期：</label>
+        <input type="text" id="datePicker" placeholder="選擇日期" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+      </div>
+      <div class="mb-4">
+        <label for="stepsInput" class="block text-gray-700 text-sm font-bold mb-2">當日步數：</label>
+        <input type="number" id="stepsInput" placeholder="請輸入您的步數" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+        <div id="stepsError" class="text-red-500 text-xs italic mt-2" style="display: none;">請輸入有效的步數。</div>
+      </div>
+      <div class="mb-4">
+        <label for="imageUpload" class="block text-gray-700 text-sm font-bold mb-2">上傳證明圖片：</label>
+        <input type="file" id="imageUpload" accept="image/*" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+        <img id="imagePreview" src="#" alt="圖片預覽" class="image-preview">
+        <div id="imageError" class="text-red-500 text-xs italic mt-2" style="display: none;">請上傳有效的圖片。</div>
+      </div>
+      <button id="saveButton" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">儲存步數</button>
+      <div id="saveMessage" class="text-green-600 text-md font-semibold mt-4" style="display: none;">步數已儲存！</div>
+    </div>
+
+    <!-- 歷史紀錄區塊 -->
+    <div id="historySection" class="bg-white rounded-lg shadow-md p-6 mb-8" style="display: none;">
+      <h2 class="text-xl font-semibold text-gray-700 mb-4">歷史紀錄</h2>
+      <div id="historyList" class="mt-4"></div>
+    </div>
+
+    <!-- 步數統計區塊 -->
+    <div id="summarySection" class="bg-white rounded-lg shadow-md p-6" style="display: none;">
+      <h2 class="text-xl font-semibold text-gray-700 mb-4">步數統計</h2>
+      <div class="mb-4">
+        <label for="startDate" class="block text-gray-700 text-sm font-bold mb-2">開始日期：</label>
+        <input type="text" id="startDate" placeholder="選擇開始日期" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+      </div>
+      <div class="mb-4">
+        <label for="endDate" class="block text-gray-700 text-sm font-bold mb-2">結束日期：</label>
+        <input type="text" id="endDate" placeholder="選擇結束日期" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+      </div>
+      <button id="calculateButton" class="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">計算總步數</button>
+      <div id="summaryResult" class="text-lg font-semibold text-gray-800 mt-4">總步數： <span id="totalSteps">0</span></div>
+      <div id="summaryError" class="text-red-500 text-xs italic mt-2" style="display: none;">請選擇有效的日期範圍。</div>
+    </div>
+
+    <!-- 達成 10000 步統計區塊 -->
+    <div id="tenThousandDaysSection" class="bg-white rounded-lg shadow-md p-6 mt-8" style="display: none;">
+      <h2 class="text-xl font-semibold text-gray-700 mb-4">達成 10000 步統計</h2>
+      <div class="mb-4">
+        <label for="startDateTenThousand" class="block text-gray-700 text-sm font-bold mb-2">開始日期：</label>
+        <input type="text" id="startDateTenThousand" placeholder="選擇開始日期" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+      </div>
+      <div class="mb-4">
+        <label for="endDateTenThousand" class="block text-gray-700 text-sm font-bold mb-2">結束日期：</label>
+        <input type="text" id="endDateTenThousand" placeholder="選擇結束日期" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+      </div>
+      <button id="calculateTenThousandButton" class="bg-indigo-500 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">計算達成天數</button>
+      <div id="tenThousandResult" class="text-lg font-semibold text-gray-800 mt-4">達成 10000 步的天數： <span id="totalTenThousandDays">0</span></div>
+      <div id="tenThousandDaysList" class="mt-4">
+        <p class="text-gray-700">達成 10000 步的日期：</p>
+        <ul id="tenThousandDaysListItems" class="list-disc list-inside"></ul>
+      </div>
+      <div id="tenThousandError" class="text-red-500 text-xs italic mt-2" style="display: none;">請選擇有效的日期範圍。</div>
+    </div>
+  </div>
+
+  <script>
+    // 初始化 Flatpickr
+    const datePicker = flatpickr("#datePicker", { dateFormat: "Y-m-d", todayButton: "今天", locale: { firstDayOfWeek: 1 } });
+    const startDatePicker = flatpickr("#startDate", { dateFormat: "Y-m-d", todayButton: "今天", locale: { firstDayOfWeek: 1 } });
+    const endDatePicker = flatpickr("#endDate", { dateFormat: "Y-m-d", todayButton: "今天", locale: { firstDayOfWeek: 1 } });
+    const startDateTenThousandPicker = flatpickr("#startDateTenThousand", { dateFormat: "Y-m-d", todayButton: "今天", locale: { firstDayOfWeek: 1 } });
+    const endDateTenThousandPicker = flatpickr("#endDateTenThousand", { dateFormat: "Y-m-d", todayButton: "今天", locale: { firstDayOfWeek: 1 } });
+  
+    // 取得 DOM 元素
+    const loginButton = document.getElementById("loginButton");
+    const logoutButton = document.getElementById("logoutButton");
+    const employeeIdInput = document.getElementById("employeeId");
+    const loginError = document.getElementById("loginError");
+    const welcomeMessage = document.getElementById("welcomeMessage");
+    const dataEntrySection = document.getElementById("dataEntrySection");
+    const datePickerInput = document.getElementById("datePicker");
+    const stepsInput = document.getElementById("stepsInput");
+    const imageUploadInput = document.getElementById("imageUpload");
+    const imagePreview = document.getElementById("imagePreview");
+    const stepsError = document.getElementById("stepsError");
+    const imageError = document.getElementById("imageError");
+    const saveButton = document.getElementById("saveButton");
+    const saveMessage = document.getElementById("saveMessage");
+    const historySection = document.getElementById("historySection");
+    const historyList = document.getElementById("historyList");
+    const summarySection = document.getElementById("summarySection");
+    const startDateInput = document.getElementById("startDate");
+    const endDateInput = document.getElementById("endDate");
+    const calculateButton = document.getElementById("calculateButton");
+    const totalStepsDisplay = document.getElementById("totalSteps");
+    const tenThousandDaysSection = document.getElementById("tenThousandDaysSection");
+    const startDateTenThousandInput = document.getElementById("startDateTenThousand");
+    const endDateTenThousandInput = document.getElementById("endDateTenThousand");
+    const calculateTenThousandButton = document.getElementById("calculateTenThousandButton");
+    const totalTenThousandDaysDisplay = document.getElementById("totalTenThousandDays");
+    const tenThousandDaysListItems = document.getElementById("tenThousandDaysListItems");
+    const tenThousandError = document.getElementById("tenThousandError");
+  
+    let currentUser = null;
+    let dailySteps = {}; // 儲存每日步數資料
+  
+    // 登入功能
+    loginButton.addEventListener("click", () => {
+      const employeeId = employeeIdInput.value.trim();
+      if (employeeId === "") {
+        loginError.style.display = "block";
+        return;
+      }
+      console.log("登入成功:", employeeId);
+      currentUser = employeeId;
+      loginError.style.display = "none";
+      welcomeMessage.textContent = `歡迎！員工編號：${currentUser}`;
+      welcomeMessage.style.display = "block";
+      // 登入後隱藏登入區塊並顯示其他功能區塊
+      document.getElementById("loginSection").style.display = "none";
+      dataEntrySection.style.display = "block";
+      historySection.style.display = "block";
+      summarySection.style.display = "block";
+      tenThousandDaysSection.style.display = "block";
+      // 顯示登出按鈕
+      logoutButton.style.display = "block";
+      loadDailySteps();
+      localStorage.setItem('currentUser', currentUser);
+    });
+  
+    // 登出功能
+    logoutButton.addEventListener("click", () => {
+      localStorage.removeItem("currentUser");
+      currentUser = null;
+      employeeIdInput.value = "";
+      employeeIdInput.disabled = false;
+      document.getElementById("loginSection").style.display = "block";
+      dataEntrySection.style.display = "none";
+      historySection.style.display = "none";
+      summarySection.style.display = "none";
+      tenThousandDaysSection.style.display = "none";
+      welcomeMessage.style.display = "none";
+      logoutButton.style.display = "none";
+    });
+  
+    // 圖片預覽功能
+    imageUploadInput.addEventListener("change", (event) => {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          imagePreview.src = e.target.result;
+          imagePreview.style.display = "block";
+          imageError.style.display = "none";
+        };
+        reader.readAsDataURL(file);
+      } else {
+        imagePreview.src = "#";
+        imagePreview.style.display = "none";
+      }
+    });
+  
+    // 儲存步數功能
+    saveButton.addEventListener("click", () => {
+      const selectedDate = datePickerInput.value;
+      const steps = stepsInput.value.trim();
+      const imageFile = imageUploadInput.files[0];
+      let hasErrors = false;
+  
+      if (!selectedDate) {
+        alert("請選擇日期。");
+        hasErrors = true;
+      }
+      if (!steps || isNaN(steps) || parseInt(steps) < 0) {
+        stepsError.style.display = "block";
+        hasErrors = true;
+      } else {
+        stepsError.style.display = "none";
+      }
+      if (imageFile && !imageFile.type.startsWith('image/')) {
+        imageError.style.display = "block";
+        hasErrors = true;
+      } else {
+        imageError.style.display = "none";
+      }
+      if (hasErrors) return;
+  
+      const stepsData = {
+        employeeId: currentUser,
+        date: selectedDate,
+        steps: parseInt(steps),
+        imageUrl: imageFile ? URL.createObjectURL(imageFile) : null
+      };
+  
+      dailySteps[selectedDate] = stepsData;
+      saveDailySteps();
+      saveMessage.style.display = "block";
+      loadHistory();
+      stepsInput.value = "";
+      imageUploadInput.value = "";
+      imagePreview.src = "#";
+      imagePreview.style.display = "none";
+  
+      setTimeout(() => {
+        saveMessage.style.display = "none";
+      }, 3000);
+  
+      // 將數據發送到 Google Sheets
+      fetch('https://script.google.com/macros/s/AKfycbyBepo6-9Qs1Szj9K94dTLuCQxtEJDurGpRirFmgCpnl3nciC2UvFPErZ7IrTR_p2cn/exec', {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(stepsData)
+      })
+      .then(response => {
+        console.log('數據已送至 Google Sheets');
+      })
+      .catch(error => {
+        console.error('發送數據錯誤：', error);
+      });
+    });
+  
+    // 載入每日步數資料
+    function loadDailySteps() {
+      if (currentUser) {
+        const savedSteps = localStorage.getItem(`dailySteps_${currentUser}`);
+        if (savedSteps) {
+          dailySteps = JSON.parse(savedSteps);
+        }
+      }
+    }
+  
+    // 保存每日步數資料
+    function saveDailySteps() {
+      if (currentUser) {
+        localStorage.setItem(`dailySteps_${currentUser}`, JSON.stringify(dailySteps));
+      }
+    }
+  
+    // 顯示歷史紀錄
+    function loadHistory() {
+      historyList.innerHTML = "";
+      const sortedDates = Object.keys(dailySteps).sort((a, b) => new Date(b) - new Date(a));
+      if (sortedDates.length === 0) {
+        historyList.innerHTML = "<p class='text-gray-500'>尚未記錄任何步數。</p>";
+        return;
+      }
+      sortedDates.forEach(date => {
+        const stepData = dailySteps[date];
+        const historyItem = document.createElement("div");
+        historyItem.classList.add("bg-gray-50", "border-l-4", "border-gray-300", "p-4", "mb-2", "rounded-md");
+        historyItem.innerHTML = `
+          <div class="flex justify-between items-center">
+            <div>
+              <p class="text-gray-700 font-semibold">${date}</p>
+              <p class="text-gray-600">步數：${stepData.steps}</p>
+            </div>
+            ${stepData.imageUrl ? `<img src="${stepData.imageUrl}" alt="步數證明" style="max-width: 80px; max-height: 80px; border-radius: 0.5rem;">`
+            : '<span class="text-gray-400 text-sm italic">無圖片</span>'}
+          </div>
+        `;
+        historyList.appendChild(historyItem);
+      });
+    }
+  
+    // 計算總步數
+    calculateButton.addEventListener("click", () => {
+      const startDate = startDateInput.value;
+      const endDate = endDateInput.value;
+      if (!startDate || !endDate) {
+        summaryError.style.display = "block";
+        return;
+      } else {
+        summaryError.style.display = "none";
+      }
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      if (start > end) {
+        summaryError.style.display = "block";
+        return;
+      }
+      let total = 0;
+      for (const date in dailySteps) {
+        const currentDate = new Date(date);
+        if (currentDate >= start && currentDate <= end) {
+          total += dailySteps[date].steps;
+        }
+      }
+      totalStepsDisplay.textContent = total;
+    });
+  
+    // 計算達成 10000 步統計
+    calculateTenThousandButton.addEventListener("click", () => {
+      const startDate = startDateTenThousandInput.value;
+      const endDate = endDateTenThousandInput.value;
+      if (!startDate || !endDate) {
+        tenThousandError.style.display = "block";
+        return;
+      } else {
+        tenThousandError.style.display = "none";
+      }
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      if (start > end) {
+        tenThousandError.style.display = "block";
+        return;
+      }
+      let count = 0;
+      const reachedDays = [];
+      for (const date in dailySteps) {
+        const currentDate = new Date(date);
+        if (currentDate >= start && currentDate <= end && dailySteps[date].steps >= 10000) {
+          count++;
+          reachedDays.push(date);
+        }
+      }
+      totalTenThousandDaysDisplay.textContent = count;
+      tenThousandDaysListItems.innerHTML = "";
+      reachedDays.forEach(day => {
+        const listItem = document.createElement("li");
+        listItem.textContent = day;
+        tenThousandDaysListItems.appendChild(listItem);
+      });
+    });
+  
+    // 頁面載入時檢查是否已登入
+    if (localStorage.getItem("currentUser")) {
+      const storedUser = localStorage.getItem("currentUser");
+      currentUser = storedUser;
+      welcomeMessage.textContent = `歡迎！員工編號：${currentUser}`;
+      welcomeMessage.style.display = "block";
+      dataEntrySection.style.display = "block";
+      historySection.style.display = "block";
+      summarySection.style.display = "block";
+      tenThousandDaysSection.style.display = "block";
+      // 顯示登出按鈕
+      logoutButton.style.display = "block";
+      employeeIdInput.value = storedUser;
+      employeeIdInput.disabled = true;
+      loadDailySteps();
+      loadHistory();
+    }
+  </script>
+</body>
+</html>
